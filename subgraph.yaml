@@ -1,5 +1,5 @@
 specVersion: 0.0.2
-description: Hyperswap is a decentralized protocol for automated token exchange on Binance Smart Chain.
+description: A fully decentralized protocol for automated liquidity provision on Fantom.
 repository: https://github.com/theothug/swap-subgraph
 schema:
   file: ./schema.graphql
