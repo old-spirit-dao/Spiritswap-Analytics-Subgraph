@@ -1,6 +1,6 @@
 import { PairHourData } from './../types/schema'
 /* eslint-disable prefer-const */
-import { BigInt, BigDecimal, store, Address } from '@graphprotocol/graph-ts'
+import { BigInt, BigDecimal, store, Address, log } from '@graphprotocol/graph-ts'
 import {
   Pair,
   Token,
@@ -265,112 +265,127 @@ export function handleSync(event: Sync): void {
 export function handleMint(event: Mint): void {
   let transaction = Transaction.load(event.transaction.hash.toHexString())
   let mints = transaction.mints
-  let mint = MintEvent.load(mints[mints.length - 1])
+  if (Array.isArray(mints)) {
+    log.debug('Transaction mints good', [transaction.id])
+    let mint = MintEvent.load(mints[mints.length - 1])
 
-  let pair = Pair.load(event.address.toHex())
-  let hyperswap = SpiritswapFactory.load(FACTORY_ADDRESS)
+    let pair = Pair.load(event.address.toHex())
+    let hyperswap = SpiritswapFactory.load(FACTORY_ADDRESS)
 
-  let token0 = Token.load(pair.token0)
-  let token1 = Token.load(pair.token1)
+    let token0 = Token.load(pair.token0)
+    let token1 = Token.load(pair.token1)
+    // log.debug('Token1', mint)
 
-  // update exchange info (except balances, sync will cover that)
-  let token0Amount = convertTokenToDecimal(event.params.amount0, token0.decimals)
-  let token1Amount = convertTokenToDecimal(event.params.amount1, token1.decimals)
+    // update exchange info (except balances, sync will cover that)
 
-  // update txn counts
-  token0.txCount = token0.txCount.plus(ONE_BI)
-  token1.txCount = token1.txCount.plus(ONE_BI)
+    let token0Amount = convertTokenToDecimal(event.params.amount0, token0.decimals)
+    let token1Amount = convertTokenToDecimal(event.params.amount1, token1.decimals)
 
-  // get new amounts of USD and Ftm for tracking
-  let bundle = Bundle.load('1')
-  let amountTotalUSD = token1.derivedFTM
-    .times(token1Amount)
-    .plus(token0.derivedFTM.times(token0Amount))
-    .times(bundle.ftmPrice)
+    // update txn counts
+    token0.txCount = token0.txCount.plus(ONE_BI)
+    token1.txCount = token1.txCount.plus(ONE_BI)
 
-  // update txn counts
-  pair.txCount = pair.txCount.plus(ONE_BI)
-  hyperswap.txCount = hyperswap.txCount.plus(ONE_BI)
+    // get new amounts of USD and Ftm for tracking
+    let bundle = Bundle.load('1')
+    let amountTotalUSD = token1.derivedFTM
+      .times(token1Amount)
+      .plus(token0.derivedFTM.times(token0Amount))
+      .times(bundle.ftmPrice)
 
-  // save entities
-  token0.save()
-  token1.save()
-  pair.save()
-  hyperswap.save()
+    // update txn counts
+    pair.txCount = pair.txCount.plus(ONE_BI)
+    hyperswap.txCount = hyperswap.txCount.plus(ONE_BI)
 
-  mint.sender = event.params.sender
-  mint.amount0 = token0Amount as BigDecimal
-  mint.amount1 = token1Amount as BigDecimal
-  mint.logIndex = event.logIndex
-  mint.amountUSD = amountTotalUSD as BigDecimal
-  mint.save()
+    // save entities
+    token0.save()
+    token1.save()
+    pair.save()
+    hyperswap.save()
 
-  // update the LP position
-  let liquidityPosition = createLiquidityPosition(event.address, mint.to as Address)
-  createLiquiditySnapshot(liquidityPosition, event)
+    mint.sender = event.params.sender
+    mint.amount0 = token0Amount as BigDecimal
+    mint.amount1 = token1Amount as BigDecimal
+    mint.logIndex = event.logIndex
+    mint.amountUSD = amountTotalUSD as BigDecimal
+    mint.save()
 
-  // update day entities
-  updatePairDayData(event)
-  updatePairHourData(event)
-  updateHyperswapDayData(event)
-  updateTokenDayData(token0 as Token, event)
-  updateTokenDayData(token1 as Token, event)
+    // update the LP position
+    let liquidityPosition = createLiquidityPosition(event.address, mint.to as Address)
+    createLiquiditySnapshot(liquidityPosition, event)
+
+    // update day entities
+    updatePairDayData(event)
+    updatePairHourData(event)
+    updateHyperswapDayData(event)
+    updateTokenDayData(token0 as Token, event)
+    updateTokenDayData(token1 as Token, event)
+  } else {
+    log.debug('Transaction mints is not an array, skipped', [transaction.id])
+    log.debug('Transaction mints is not an array, skipped', transaction.mints)
+  }
 }
 
 export function handleBurn(event: Burn): void {
   let transaction = Transaction.load(event.transaction.hash.toHexString())
+
   let burns = transaction.burns
-  let burn = BurnEvent.load(burns[burns.length - 1])
+  if (Array.isArray(burns)) {
+    log.debug('Transaction burns good', [transaction.id])
+    let burn = BurnEvent.load(burns[burns.length - 1])
 
-  let pair = Pair.load(event.address.toHex())
-  let hyperswap = SpiritswapFactory.load(FACTORY_ADDRESS)
+    let pair = Pair.load(event.address.toHex())
+    let hyperswap = SpiritswapFactory.load(FACTORY_ADDRESS)
 
-  //update token info
-  let token0 = Token.load(pair.token0)
-  let token1 = Token.load(pair.token1)
-  let token0Amount = convertTokenToDecimal(event.params.amount0, token0.decimals)
-  let token1Amount = convertTokenToDecimal(event.params.amount1, token1.decimals)
+    //update token info
+    let token0 = Token.load(pair.token0)
+    let token1 = Token.load(pair.token1)
+    let token0Amount = convertTokenToDecimal(event.params.amount0, token0.decimals)
+    let token1Amount = convertTokenToDecimal(event.params.amount1, token1.decimals)
 
-  // update txn counts
-  token0.txCount = token0.txCount.plus(ONE_BI)
-  token1.txCount = token1.txCount.plus(ONE_BI)
+    // update txn counts
+    token0.txCount = token0.txCount.plus(ONE_BI)
+    token1.txCount = token1.txCount.plus(ONE_BI)
 
-  // get new amounts of USD and Ftm for tracking
-  let bundle = Bundle.load('1')
-  let amountTotalUSD = token1.derivedFTM
-    .times(token1Amount)
-    .plus(token0.derivedFTM.times(token0Amount))
-    .times(bundle.ftmPrice)
+    // get new amounts of USD and Ftm for tracking
+    let bundle = Bundle.load('1')
+    let amountTotalUSD = token1.derivedFTM
+      .times(token1Amount)
+      .plus(token0.derivedFTM.times(token0Amount))
+      .times(bundle.ftmPrice)
 
-  // update txn counts
-  hyperswap.txCount = hyperswap.txCount.plus(ONE_BI)
-  pair.txCount = pair.txCount.plus(ONE_BI)
+    // update txn counts
+    hyperswap.txCount = hyperswap.txCount.plus(ONE_BI)
+    pair.txCount = pair.txCount.plus(ONE_BI)
 
-  // update global counter and save
-  token0.save()
-  token1.save()
-  pair.save()
-  hyperswap.save()
+    // update global counter and save
+    token0.save()
+    token1.save()
+    pair.save()
+    hyperswap.save()
 
-  // update burn
-  // burn.sender = event.params.sender
-  burn.amount0 = token0Amount as BigDecimal
-  burn.amount1 = token1Amount as BigDecimal
-  // burn.to = event.params.to
-  burn.logIndex = event.logIndex
-  burn.amountUSD = amountTotalUSD as BigDecimal
-  burn.save()
+    // update burn
+    // burn.sender = event.params.sender
+    burn.amount0 = token0Amount as BigDecimal
+    burn.amount1 = token1Amount as BigDecimal
+    // burn.to = event.params.to
+    burn.logIndex = event.logIndex
+    burn.amountUSD = amountTotalUSD as BigDecimal
+    burn.save()
 
-  // update the LP position
-  let liquidityPosition = createLiquidityPosition(event.address, burn.sender as Address)
-  createLiquiditySnapshot(liquidityPosition, event)
+    // update the LP position
+    let liquidityPosition = createLiquidityPosition(event.address, burn.sender as Address)
+    createLiquiditySnapshot(liquidityPosition, event)
 
-  // update day entities
-  updatePairDayData(event)
-  updatePairHourData(event)
-  updateHyperswapDayData(event)
-  updateTokenDayData(token0 as Token, event)
-  updateTokenDayData(token1 as Token, event)
+    // update day entities
+    updatePairDayData(event)
+    updatePairHourData(event)
+    updateHyperswapDayData(event)
+    updateTokenDayData(token0 as Token, event)
+    updateTokenDayData(token1 as Token, event)
+  } else {
+    log.error('Transaction burns is not an array, skipped', [transaction.id])
+    log.error('Transaction burns is not an array, skipped', transaction.mints)
+  }
 }
 
 export function handleSwap(event: Swap): void {
