@@ -1,57 +1,33 @@
-# Hyperswap Subgraph
+# PancakeSwap Subgraph
 
-[Hyperswap](https://hyperswap.com/) is a decentralized protocol for automated token exchange on Binance Smart Chain.
+TheGraph exposes a GraphQL endpoint to query the events and entities within the Binance Smart Chain and PancakeSwap ecosystem.
 
-This subgraph dynamically tracks any pair created by the hyperswap factory. It tracks of the current state of Hyperswap contracts, and contains derived stats for things like historical data and USD prices.
+Currently, there are multiple subgraphs, but additional subgraphs can be added to this repo:
 
-- aggregated data across pairs and tokens,
-- data on individual pairs and tokens,
-- data on transactions
-- data on liquidity providers
-- historical data on Hyperswap, pairs or tokens, aggregated by day
+1. **[Blocks](https://thegraph.com/explorer/subgraph/pancakeswap/blocks)**: Tracks all blocks on Binance Smart Chain.
 
-## Running Locally
+2. **[Pairs](https://thegraph.com/explorer/subgraph/pancakeswap/pairs)**: Tracks all PancakeSwap Pairs and Tokens.
 
-Make sure to update package.json settings to point to your own graph account.
+3. **[Exchange](https://thegraph.com/explorer/subgraph/pancakeswap/exchange)**: Tracks all PancakeSwap Exchange data with price, volume, liquidity, ...
 
-## Queries
+4. **[Profile](https://thegraph.com/explorer/subgraph/pancakeswap/profile)**: Tracks all PancakeSwap Profile with teams, users, points and campaign.
 
-Below are a few ways to show how to query the hyperswap-subgraph for data. The queries show most of the information that is queryable, but there are many other filtering options that can be used, just check out the [querying api](https://thegraph.com/docs/graphql-api). These queries can be used locally or in The Graph Explorer playground.
+5. **[Timelock](https://thegraph.com/explorer/subgraph/pancakeswap/timelock)**: Tracks all timelock transactions queued, executed, and cancelled.
 
-## Key Entity Overviews
+6. **[Trading Competition v1](https://thegraph.com/explorer/subgraph/pancakeswap/trading-competition-v1)**: Tracks all metrics for the Easter Battle (April 07—14, 2021).
 
-#### HyperswapFactory
+## v1
 
-Contains data across all of Hyperswap. This entity tracks important things like total liquidity (in ETH and USD, see below), all time volume, transaction count, number of pairs and more.
+To access subgraphs related to PancakeSwap v1 ecosystem ([article](https://pancakeswap.medium.com/the-great-migration-vote-4093cb3edf23)), use [`v1`](https://github.com/pancakeswap/pancake-subgraph/tree/v1) branch.
 
-#### Token
+## To setup and deploy
 
-Contains data on a specific token. This token specific data is aggregated across all pairs, and is updated whenever there is a transaction involving that token.
+For any of the subgraph: `blocks` as `[subgraph]`
 
-#### Pair
+1. Run the `yarn run codegen:[subgraph]` command to prepare the TypeScript sources for the GraphQL (generated/*).
 
-Contains data on a specific pair.
+2. Run the `yarn run build:[subgraph]` command to build the subgraph, and check compilation errors before deploying.
 
-#### Transaction
+3. Run `graph auth https://api.thegraph.com/deploy/ '<ACCESS_TOKEN>'`
 
-Every transaction on Hyperswap is stored. Each transaction contains an array of mints, burns, and swaps that occured within it.
-
-#### Mint, Burn, Swap
-
-These contain specifc information about a transaction. Things like which pair triggered the transaction, amounts, sender, recipient, and more. Each is linked to a parent Transaction entity.
-
-## Example Queries
-
-### Querying Aggregated Hyperswap Data
-
-This query fetches aggredated data from all hyperswap pairs and tokens, to give a view into how much activity is happening within the whole protocol.
-
-```graphql
-{
-  hyperswapFactories(first: 1) {
-    pairCount
-    totalVolumeUSD
-    totalLiquidityUSD
-  }
-}
-```
+4. Deploy via `yarn run deploy:[subgraph]`.
